@@ -14,9 +14,16 @@ class TodoListViewController: UITableViewController {
     
     var itemArray = ["first item","second item","third item"]
     
+    let defults = UserDefaults.standard
+    
 
     override func viewDidLoad() {
         super.viewDidLoad()
+        // To update itemArray with the array in plist file
+        
+        if let  items=defults.array(forKey: "ToDoListArray") as? [String] {
+            itemArray=items
+        }
         
     }
     
@@ -61,6 +68,9 @@ class TodoListViewController: UITableViewController {
             // That will happen once the user clicks add item button in UIAlert
             
             self.itemArray.append(textField.text!)
+            
+            self.defults.set(self.itemArray, forKey: "ToDoListArray")
+            
             self.tableView.reloadData()
             
         }
