@@ -7,35 +7,39 @@
 //
 
 import UIKit
-import CoreData
+import RealmSwift
 
 
 class CategoryTableViewController: UITableViewController {
     
+    // initalizing New Realm.
+    
+    let realm = try! Realm()
+    
     // Constant Here.
     
-    var categoryArray = [Category]()
-    
-    let context = (UIApplication.shared.delegate as! AppDelegate).persistentContainer.viewContext
-    
+    var categories: Results<Category>?
     
 
     override func viewDidLoad() {
         super.viewDidLoad()
         
-         loadCategories()
+      loadCategories()
 
     }
     
     //MARK:- TableView DataSource Methods.
     
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        return categoryArray.count
+        // Nil Coalescing Operator->>>
+        
+        return categories?.count ?? 1 //<<<- That's Mean if the categories not nil return categories.count and if it Nil return 1 [defult value]
     }
     
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(withIdentifier: "CategoryCell", for: indexPath)
-        cell.textLabel?.text = categoryArray[indexPath.row].name
+        cell.textLabel?.text = categories?[indexPath.row].name ?? "No Categories Add Yet"
+// It's mean if the categories not nil display the name of the indexpath.row in categories and if it is nil display this defult value.
         
         return cell
     }
@@ -50,7 +54,7 @@ class CategoryTableViewController: UITableViewController {
         let destinationVC = segue.destination as! TodoListViewController
         
         if let indexPath = tableView.indexPathForSelectedRow {
-            destinationVC.selectedCategory = categoryArray[indexPath.row]
+            destinationVC.selectedCategory = categories?[indexPath.row]
         }
     }
     
@@ -58,23 +62,23 @@ class CategoryTableViewController: UITableViewController {
     
     //MARK: - Data Manipulation Methods.
     
-    func saveCategories (){
+    func save (category: Category){
         do{
-            try context.save()
+            try realm.write {
+                realm.add(category)
+            }
+            
         }catch{
-            print("Error Saving Context , \(error)")
+            print("Error Saving in realm , \(error)")
         }
         self.tableView.reloadData()
     }
     
     func loadCategories (){
-        let request : NSFetchRequest<Category> = Category.fetchRequest()
-        do{
-            categoryArray = try context.fetch(request)
-        }catch{
-           print("Error Fetching Data , \(error)")
-        }
-        tableView.reloadData()
+        
+         categories = realm.objects(Category.self)
+
+         tableView.reloadData()
     }
 
     //MARK: - Add New Categories.
@@ -87,12 +91,10 @@ class CategoryTableViewController: UITableViewController {
         let action = UIAlertAction(title: "Add Category", style: .default) { (action) in
             // this will happen once user clicked on add button (+).
             
-            let newCategory = Category(context: self.context)
+            let newCategory = Category()
             newCategory.name = textField.text!
             
-            self.categoryArray.append(newCategory)
-            
-            self.saveCategories()
+            self.save (category: newCategory)
         }
         
         // add textField in alert.
