@@ -41,7 +41,7 @@ class TodoListViewController: SwipeTableViewController {
     
     override func viewWillDisappear(_ animated: Bool) {
 
-        UpdateNavBar(withHexCode: "1D9BF6")
+        UpdateNavBar(withHexCode: "7f8c8d")
     }
     
     
