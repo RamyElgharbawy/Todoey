@@ -8,13 +8,15 @@
 
 import UIKit
 import RealmSwift
-
-class TodoListViewController: UITableViewController {
+import ChameleonFramework
+class TodoListViewController: SwipeTableViewController {
     
     // Constants here:
     let realm = try! Realm()
     
     var todoItems: Results<Item>?
+    
+    @IBOutlet weak var searchBar: UISearchBar!
     
     var selectedCategory : Category? {
         didSet{ // this method load when selectedCategory have a value.
@@ -28,6 +30,36 @@ class TodoListViewController: UITableViewController {
         
     }
     
+    override func viewWillAppear(_ animated: Bool) {
+       
+        title = selectedCategory!.name
+        
+        guard let colourHex = selectedCategory?.colour else{fatalError()}
+            
+         UpdateNavBar(withHexCode: colourHex)
+    }
+    
+    override func viewWillDisappear(_ animated: Bool) {
+
+        UpdateNavBar(withHexCode: "1D9BF6")
+    }
+    
+    
+    //MARK:- NavBar Design Method.
+    
+    func UpdateNavBar(withHexCode colourHexCode: String) {
+        
+        guard let navBar = navigationController?.navigationBar else {fatalError("Navigation controller dosen't exist.")}
+        
+        guard let navBarColour = UIColor(hexString: colourHexCode) else{fatalError()}
+        
+        navBar.barTintColor = navBarColour
+        navBar.tintColor = ContrastColorOf(navBarColour, returnFlat: true)
+        navBar.largeTitleTextAttributes = [NSAttributedString.Key.foregroundColor : ContrastColorOf(navBarColour, returnFlat: true)]
+        searchBar.barTintColor = navBarColour
+        
+    }
+    
     // MARK:- TableView Datasource Methods
     
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
@@ -35,17 +67,21 @@ class TodoListViewController: UITableViewController {
     }
     
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        let cell = tableView.dequeueReusableCell(withIdentifier: "ToDoItemCell", for: indexPath)
+         let cell = super.tableView(tableView, cellForRowAt: indexPath)
         
-        if let item = todoItems?[indexPath.row]// to store this value insted of hard typing
-        {
+        if let item = todoItems?[indexPath.row] {
             cell.textLabel?.text = item.title
-            
+         
+            if let colour = UIColor(hexString: selectedCategory!.colour)?.darken(byPercentage: CGFloat(indexPath.row ) / CGFloat(todoItems!.count)) {
+                cell.backgroundColor = colour
+                cell.textLabel?.textColor = ContrastColorOf(colour, returnFlat: true)
+            }
+
             // To make check mark for selected cell :>>>>>
-            
+
             // Ternary Operator:
             // Value = Condition ? Value If True : Value If False
-            cell.accessoryType = item.done ? .checkmark : .none
+             cell.accessoryType = item.done ? .checkmark : .none
         }else{
             cell.textLabel?.text = "No Items Added"
         }
@@ -68,12 +104,6 @@ class TodoListViewController: UITableViewController {
         }
         
            tableView.reloadData()
-        
-     //   todoItems[indexPath.row].done = !todoItems[indexPath.row].done
-        // context.delete(itemArray[indexPath.row])
-        //itemArray.remove(at: indexPath.row)
-       
-    //     saveItems()
         
         // To make selected row flash and animated:
         tableView.deselectRow(at: indexPath, animated: true)
@@ -117,25 +147,25 @@ class TodoListViewController: UITableViewController {
     
     // MARK: - DataBase Methods
 
-//    func saveItems(){
-//
-//        do {
-//            try context.save()
-//        }catch{
-//            print("Error saving context,\(error)")
-//        }
-//
-//        self.tableView.reloadData()
-//    }
-    
-    // Load data methode:
-    
-    // This is a func have 2 parameter 1- is the requset and his defult value , 2- is the predicate and his defult value.
     func loadItems () {
         
         todoItems = selectedCategory?.items.sorted(byKeyPath: "title", ascending: true)
 
         tableView.reloadData()
+    }
+    
+    // MARK:- Delete Data From Swipe.
+    
+    override func updateModel(at indexPath: IndexPath) {
+        if let item = todoItems?[indexPath.row] {
+            do {
+                try realm.write{
+                    realm.delete(item)
+                }
+            }catch{
+                print("Error Deleting Item with Swipe")
+            }
+        }
     }
     
 }
@@ -151,19 +181,6 @@ extension TodoListViewController : UISearchBarDelegate {
         tableView.reloadData()
     }
     
-    
-//    // 1- creat a request to load the data from container.
-//    let request : NSFetchRequest<Item> = Item.fetchRequest()
-//
-//    // 2- Creat a predicate to manege the search options and Add it to the request.
-//    let predicate = NSPredicate(format: "title CONTAINS[cd] %@", searchBar.text!)
-//
-//    // 3- Sort the search result by using sortDescriptor and Add it to the request.
-//    request.sortDescriptors = [NSSortDescriptor(key: "title", ascending: true)]
-//    
-//    // 4- load the data from context in container.
-//
-//    loadItems(with: request,predicate: predicate)
 
     func searchBar(_ searchBar: UISearchBar, textDidChange searchText: String) {
         if searchBar.text?.count == 0 {
